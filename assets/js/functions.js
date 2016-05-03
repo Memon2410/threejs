@@ -5,8 +5,10 @@ function initPage(){
 		var camera, scene, renderer, objects;
 		var particleLight, pointLight;
 		var dae;
-		var clock = new THREE.Clock();
+		//var clock = new THREE.Clock();
 		var mixer;
+
+		var textureEquirec;
 
 		// Collada model
 		var loader = new THREE.ColladaLoader();
@@ -24,7 +26,7 @@ function initPage(){
 			dae.scale.x = dae.scale.y = dae.scale.z = 1;
 			dae.position.x = -0.3;
 			dae.position.y = -5.5;
-			dae.rotation.y = -Math.PI / 2.5;
+			dae.rotation.y = Math.PI * 0.5;
 			dae.updateMatrix();
 
 			init();
@@ -35,7 +37,6 @@ function initPage(){
 
 		// Function called when download progresses
 		function ( xhr ) {
-			//console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
 			$('#text-loader').text(Math.round((xhr.loaded / xhr.total * 100)) + '%')
 		}
 	);
@@ -51,7 +52,7 @@ function initPage(){
 		// Add the COLLADA
 		scene.add( dae );
 		// Lights
-		scene.add( new THREE.AmbientLight(0xCCCCCC) );
+		scene.add(new THREE.AmbientLight(0xFFFFFF));
 		pointLight = new THREE.PointLight(0xff5500, 2.5, 50);
 		pointLight.position.set(10, 3, 0);
 		scene.add(pointLight);
@@ -59,6 +60,39 @@ function initPage(){
 		pointLight = new THREE.PointLight(0xff3300, 1, 70);
 		pointLight.position.set(-10, -3, 0);
 		scene.add(pointLight);
+
+		// ----------------- TEXTURE SKYBOX
+		var textureLoader = new THREE.TextureLoader();
+		textureEquirec = textureLoader.load( "./assets/img/textures/field_pano.jpg" );
+		textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
+		textureEquirec.magFilter = THREE.LinearFilter;
+		textureEquirec.minFilter = THREE.LinearMipMapLinearFilter;
+
+		var equirectShader = THREE.ShaderLib[ "equirect" ];
+		var equirectMaterial = new THREE.ShaderMaterial( {
+			fragmentShader: equirectShader.fragmentShader,
+			vertexShader: equirectShader.vertexShader,
+			uniforms: equirectShader.uniforms,
+			depthWrite: false,
+			side: THREE.BackSide
+		});
+
+		equirectMaterial.uniforms[ "tEquirect" ].value = textureEquirec;
+
+		var geometry = new THREE.SphereGeometry( 400.0, 24, 24 );
+		sphereMaterial = new THREE.MeshLambertMaterial( { envMap: textureEquirec } );
+		sphereMesh = new THREE.Mesh( geometry, sphereMaterial );
+		scene.add( sphereMesh );
+
+		cubeMesh = new THREE.Mesh( new THREE.BoxGeometry( 100, 100, 100 ), sphereMaterial );
+		scene.add( cubeMesh );
+
+		textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
+		cubeMesh.material = equirectMaterial;
+		cubeMesh.visible = true;
+		sphereMaterial.envMap = textureEquirec;
+		sphereMaterial.needsUpdate = true;
+		
 		// Renderer
 		renderer = new THREE.WebGLRenderer();
 		renderer.setPixelRatio(window.devicePixelRatio);
@@ -84,9 +118,10 @@ function initPage(){
 	// controls
 	function controls() {
 		var controls = new THREE.OrbitControls(camera, renderer.domElement);
+		controls.minPolarAngle = Math.PI * 0.5;
 		controls.maxPolarAngle = Math.PI * 0.5;
-		controls.minDistance = 1;
-		controls.maxDistance = 75;
+		controls.minDistance = 3;
+		controls.maxDistance = 60;
 	}
 
 
