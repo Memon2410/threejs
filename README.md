@@ -1,2 +1,2 @@
 # threejs
-Test threeJS site
+Test threeJS site loading objects collada.
