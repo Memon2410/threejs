@@ -1,33 +1,38 @@
 function initPage(){
 
+	TweenMax.to($('#container-tweet'), 0, {autoAlpha:0});
+
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+		var containerWidth = window.innerWidth;
+		var containerHeight = window.innerHeight;
+		
 		var container;
-		var camera, scene, renderer, objects;
-		var particleLight, pointLight;
+		var camera, scene, renderer;
+		var pointLight;
 		var dae;
-		var object;
-		var mixer;
 
 		var geometry;
 		var material;
 		var sphere;
-		var spheresArray = [], plane;
+		var spheresArray = [];
 
 		var textureEquirec;
 		
 		var projector;
-		var mouseVector;
-
-		var containerWidth = window.innerWidth;
-		var containerHeight = window.innerHeight;
-		
+		var mouseVector
 		var obj;
 		var objName;
+
+		var plane;
+
+		var theta;
+
+		var controls;
 
 		// Collada model
 		var loader = new THREE.ColladaLoader();
 		loader.options.convertUpAxis = true;
-		loader.load('./assets/models/model.dae',
+		loader.load('./assets/models/trophy.dae',
 			function (collada) {
 				dae = collada.scene;
 				dae.traverse( function ( child ) {
@@ -38,7 +43,7 @@ function initPage(){
 				});
 
 			dae.scale.x = dae.scale.y = dae.scale.z = 1;
-			dae.position.y = -5.5;
+			//dae.position.y = -5.5;
 			dae.rotation.y = Math.PI * 0.5;
 
 			dae.updateMatrix();
@@ -46,12 +51,20 @@ function initPage(){
 			init();
 			
 			render();
-			controls();
+			controlsInit();
 		},
 
 		// Function called when download progresses
 		function ( xhr ) {
-			$('#text-loader').text(Math.round((xhr.loaded / xhr.total * 100)) + '%')
+			console.log(Math.round(xhr.loaded / xhr.total * 100) + '%');
+			$('#text-loader').text(Math.round(xhr.loaded / xhr.total * 100) + '%');
+			/*success: function () {
+				console.log('CAMARA!!!');
+			}*/
+			//if(xhr.loaded == xhr.total) {
+			if(xhr.loaded > 90) {
+				$('#container-loader').hide();
+			}
 		}
 	);
 
@@ -59,8 +72,8 @@ function initPage(){
 	function init() {
 		container = document.createElement('div');
 		document.body.appendChild(container);
-		camera = new THREE.PerspectiveCamera(50, containerWidth / containerHeight, 1, 2000);
-		camera.position.set(2, 4, 5);
+		camera = new THREE.PerspectiveCamera(45, containerWidth / containerHeight, 1, 1000);
+		camera.position.set(0, 0, 10);
 		scene = new THREE.Scene();
 
 		// Add the COLLADA
@@ -68,15 +81,15 @@ function initPage(){
 
 		// Spheres
 		geometry = new THREE.SphereGeometry(0.25, 32, 32);
-		material = new THREE.MeshBasicMaterial({color: 0x0000FF, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.5});
+		material = new THREE.MeshBasicMaterial({color: 0x0000FF, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.75});
 		sphere1 = new THREE.Mesh( geometry, material);
-		sphere1.position.x = 0.5;
+		sphere1.position.x = 0.7;
 		sphere1.name = 'sphere-1';
 		scene.add(sphere1);
 
 		spheresArray.push(sphere1);
 
-		material = new THREE.MeshBasicMaterial({color: 0x0000FF, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.5});
+		material = new THREE.MeshBasicMaterial({color: 0x00FFFF, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.75});
 		sphere2 = new THREE.Mesh( geometry, material);
 		sphere2.position.x = -0.7;
 		sphere2.name = 'sphere-2';
@@ -149,6 +162,14 @@ function initPage(){
 			}
 		}
 
+		// Add Plane
+		geometry = new THREE.PlaneGeometry(200, 200);
+		material = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, envMap: textureEquirec});
+		plane = new THREE.Mesh( geometry, material );
+		scene.add(plane);
+		plane.material.transparent = true;
+
+		TweenMax.to(plane.material, 0, {opacity:0});
 
 		// Events
 		window.addEventListener('resize', onWindowResize, false);
@@ -182,21 +203,64 @@ function initPage(){
 			obj = intersection.object;
 			objName = obj.name;
 
-			//TweenMax.to(sphere.material, 2, {opacity: 1});
-			//TweenMax.to(dae.position, 1, {z:6, ease:Expo.easeOut});
-
 			switch (objName) {
 				case 'sphere-1':
-					TweenMax.to(dae.position, 2, {x: camera.position.x, y: camera.position.y - 5.5, z: camera.position.z, ease:Expo.easeOut});
+					theta = 1.5;
+					autoRotate();
+					//TweenMax.to(dae.position, 2, {x: camera.position.x, y: camera.position.y - 5.5, z: camera.position.z, ease:Expo.easeOut});
 				break;
 				case 'sphere-2':
-					TweenMax.to(dae.position, 2, {x: camera.position.x, y: camera.position.y - 5.5, z: camera.position.z, ease:Expo.easeOut});
+					theta = 1.5;
+					autoRotate();
+					//TweenMax.to(dae.position, 2, {x: camera.position.x, y: camera.position.y - 5.5, z: camera.position.z, ease:Expo.easeOut});
 				break;
 
 			}
 		}
+
+		if (event.target.id == "close-button") {
+			theta = 0.2;
+			returnRotate();
+		}
 	}
 
+	function autoRotate(){
+		theta -= 0.1;
+
+		if(theta > -0.2) {
+			camera.position.x = Math.PI * theta;
+			camera.position.y = Math.PI * 0.2;
+			camera.position.z = Math.PI * theta;
+			camera.lookAt(scene.position);
+
+			camera.updateMatrixWorld();	
+			TweenMax.delayedCall(0.05, autoRotate);
+		} else {
+			TweenMax.to(plane.material, 0.5, {opacity:1, ease:Expo.easeOut});
+			TweenMax.to($('#container-tweet'), 0.5, {autoAlpha:1, ease:Expo.easeOut});
+			TweenMax.to(dae.material, 0.5, {opacity:0, ease:Expo.easeOut});
+		}
+		controls.enabled = false;
+	}
+
+	function returnRotate() {
+		theta += 0.1;
+
+		TweenMax.to(plane.material, 0.5, {opacity:0, ease:Expo.easeOut});
+		TweenMax.to($('#container-tweet'), 0.5, {autoAlpha:0, ease:Expo.easeOut});
+		TweenMax.to(dae.material, 0.5, {opacity:1, ease:Expo.easeOut});
+
+		if(theta < 2) {
+			camera.position.x = Math.PI * theta;
+			camera.position.y = Math.PI * 0.2;
+			camera.position.z = Math.PI * theta;
+			camera.lookAt(scene.position);
+
+			camera.updateMatrixWorld();	
+			TweenMax.delayedCall(0.05, returnRotate);
+		}
+		controls.enabled = true;
+	}
 
 	THREE.Vector3.prototype.pickingRay = function (camera) {
 		var tan = Math.tan(0.5 * THREE.Math.degToRad(camera.fov)) / camera.zoom;
@@ -205,7 +269,8 @@ function initPage(){
 		this.y *= tan; 
 		this.z = - 1;
 
-		return this.transformDirection(camera.matrixWorld);
+		return this.transformDirection(camera.matrixWorld
+			);
 	};
 
 	
@@ -217,12 +282,12 @@ function initPage(){
 
 
 	// controls
-	function controls() {
-		var controls = new THREE.OrbitControls(camera, renderer.domElement);
+	function controlsInit() {
+		controls = new THREE.OrbitControls(camera, renderer.domElement);
 		controls.minPolarAngle = Math.PI * 0.5;
 		controls.maxPolarAngle = Math.PI * 0.5;
-		controls.minDistance = 2;
-		controls.maxDistance = 20;
+		controls.minDistance = 5;
+		controls.maxDistance = 30;
 	}
 
 
